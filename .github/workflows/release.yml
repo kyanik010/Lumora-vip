@@ -39,15 +39,54 @@ jobs:
       - name: Install matching build-tools
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
 
+      - name: Prepare signing credentials
+        id: signing
+        shell: bash
+        env:
+          ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+          ANDROID_SIGNING_ALIAS: ${{ secrets.ANDROID_SIGNING_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p app/build/signing
+          valid=false
+
+          if [ -n "$ANDROID_SIGNING_KEY" ]; then
+            printf '%s' "$ANDROID_SIGNING_KEY" | base64 --decode > app/build/signing/release.jks 2>/dev/null || true
+            if keytool -list -keystore app/build/signing/release.jks                 -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+              valid=true
+            fi
+          fi
+
+          if [ "$valid" = true ]; then
+            {
+              echo "SIGNING_KEY_BASE64=$ANDROID_SIGNING_KEY"
+              echo "SIGNING_ALIAS=$ANDROID_SIGNING_ALIAS"
+              echo "KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+              echo "KEY_PASSWORD=$ANDROID_KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "Using repository release keystore."
+          else
+            echo "Repository signing secret is missing or invalid; generating a temporary CI signing key."
+            keytool -genkeypair -v               -keystore app/build/signing/release.jks               -storetype PKCS12               -alias lumora-ci               -keyalg RSA               -keysize 2048               -validity 3650               -storepass "lumora-ci-store"               -keypass "lumora-ci-key"               -dname "CN=Lumora CI, OU=Build, O=Lumora, L=NA, ST=NA, C=US" >/dev/null 2>&1
+            {
+              echo "SIGNING_KEY_BASE64=$(base64 -w 0 app/build/signing/release.jks)"
+              echo "SIGNING_ALIAS=lumora-ci"
+              echo "KEYSTORE_PASSWORD=lumora-ci-store"
+              echo "KEY_PASSWORD=lumora-ci-key"
+            } >> "$GITHUB_ENV"
+          fi
+
       - name: Sign APK
         id: sign_app
         uses: r0adkll/sign-android-release@v1
         with:
           releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-          alias: ${{ secrets.ANDROID_SIGNING_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          signingKeyBase64: ${{ env.SIGNING_KEY_BASE64 }}
+          alias: ${{ env.SIGNING_ALIAS }}
+          keyStorePassword: ${{ env.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ env.KEY_PASSWORD }}
         env:
           BUILD_TOOLS_VERSION: "35.0.0"
 
