@@ -420,6 +420,13 @@ class PlayerManager(
             .setSubtitleConfigurations(existingSubtitles + subtitle)
             .build()
 
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setPreferredTextLanguages("ar", "ara")
+            .setSelectUndeterminedTextLanguage(true)
+            .build()
+
         player.setMediaItem(mediaItem, position)
         player.prepare()
         if (wasPlaying) player.play()
