@@ -74,7 +74,7 @@ jobs:
               echo "SIGNING_KEY_BASE64=$(base64 -w 0 app/build/signing/release.jks)"
               echo "SIGNING_ALIAS=lumora-ci"
               echo "KEYSTORE_PASSWORD=lumora-ci-store"
-              echo "KEY_PASSWORD=lumora-ci-key"
+              echo "KEY_PASSWORD=lumora-ci-store"
             } >> "$GITHUB_ENV"
           fi
 
