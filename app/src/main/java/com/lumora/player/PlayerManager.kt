@@ -385,6 +385,54 @@ class PlayerManager(
         player.play()
     }
 
+
+    /**
+     * Sideload one external subtitle into the currently playing item.
+     *
+     * Media3 models sideloaded subtitles as part of the media source, so adding a new
+     * subtitle requires rebuilding that source. We preserve the current position and
+     * play state; the video/audio URL remains the same.
+     */
+    fun attachExternalSubtitleFile(path: String, title: String, language: String): Boolean {
+        if (released) return false
+        val currentUri = player.currentMediaItem?.localConfiguration?.uri ?: return false
+        val wasPlaying = player.playWhenReady
+        val position = player.currentPosition
+        val subtitleUri = Uri.fromFile(java.io.File(path))
+        val mimeType = when {
+            path.endsWith(".vtt", ignoreCase = true) -> androidx.media3.common.MimeTypes.TEXT_VTT
+            path.endsWith(".ass", ignoreCase = true) || path.endsWith(".ssa", ignoreCase = true) ->
+                androidx.media3.common.MimeTypes.TEXT_SSA
+            else -> androidx.media3.common.MimeTypes.APPLICATION_SUBRIP
+        }
+
+        val subtitle = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
+            .setMimeType(mimeType)
+            .setLanguage(language)
+            .setLabel(title)
+            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
+            .build()
+
+        val existingSubtitles = player.currentMediaItem?.localConfiguration?.subtitleConfigurations.orEmpty()
+        val mediaItem = MediaItem.Builder()
+            .setUri(currentUri)
+            .setSubtitleConfigurations(existingSubtitles + subtitle)
+            .build()
+
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setPreferredTextLanguages("ar", "ara")
+            .setSelectUndeterminedTextLanguage(true)
+            .build()
+
+        player.setMediaItem(mediaItem, position)
+        player.prepare()
+        if (wasPlaying) player.play()
+        return true
+    }
+
     /**
      * When the caller knows whether this stream is a dub or a sub (the plugin carries the
      * hint on the search result and on the resolve), prefer the matching audio track once the

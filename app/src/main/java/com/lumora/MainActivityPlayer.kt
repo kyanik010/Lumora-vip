@@ -162,7 +162,7 @@ internal fun MainActivity.setupPlayerControls() {
     binding.sideMenuCategoryList.layoutManager = LinearLayoutManager(this)
     binding.sideMenuCategoryList.adapter = sideMenuCategoryAdapter
     binding.btnAudioTrack.setOnClickListener { showTrackPicker(isAudio = true) }
-    binding.btnSubtitleTrack.setOnClickListener { showTrackPicker(isAudio = false) }
+    binding.btnSubtitleTrack.setOnClickListener { showSubtitlePicker() }
     binding.btnChapters.setOnClickListener { showChapterPicker() }
     binding.btnLiveVersions.setOnClickListener { showVersionPicker() }
     binding.btnRewind.setOnClickListener { playerManager.seekBy(-15_000); showControls() }
