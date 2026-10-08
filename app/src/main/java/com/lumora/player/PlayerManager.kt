@@ -414,9 +414,10 @@ class PlayerManager(
             .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
             .build()
 
+        val existingSubtitles = player.currentMediaItem?.localConfiguration?.subtitleConfigurations.orEmpty()
         val mediaItem = MediaItem.Builder()
             .setUri(currentUri)
-            .setSubtitleConfigurations(listOf(subtitle))
+            .setSubtitleConfigurations(existingSubtitles + subtitle)
             .build()
 
         player.setMediaItem(mediaItem, position)
